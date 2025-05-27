@@ -44,5 +44,3 @@ if __name__ == "__main__":
         Windows_api.set_foreground_window(window)
         
         main()
-        
-# test

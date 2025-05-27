@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget,
-    QFrame, QLabel, QLineEdit
+    QFrame, QLabel, QLineEdit, QPushButton
 )
 
 from UI.basic import Title, DTable, Button, ButtonGroup
@@ -47,6 +47,11 @@ class KeySettingPanel(QWidget):
         layout.addWidget(title)
         
         layout.addWidget(DTable(["按鍵", "間隔時間 ( 秒 )", "重複次數"]).get())
+        
+        button = QPushButton("test")
+        button.clicked.connect(self.test)
+        
+        layout.addWidget(button)
                 
         button_group = ButtonGroup([
             Button("新增", self.add_key).get(),
@@ -59,6 +64,10 @@ class KeySettingPanel(QWidget):
 
     def get(self):
         return self.key_panel
+    
+    
+    def test(self):
+        print("test")
     
     
     def add_key(self):
