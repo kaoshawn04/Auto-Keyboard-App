@@ -319,6 +319,25 @@ class Windows_api():
         #else:
         #    return msg
         
+    
+    @staticmethod
+    def remove_message():
+        peek_message = user32.PeekMessageW
+        peek_message.argtypes = [
+            ctypes.POINTER(wintypes.MSG),
+            wintypes.HWND,
+            ctypes.c_uint,
+            ctypes.c_uint,
+            ctypes.c_uint
+        ]
+        peek_message.restype = ctypes.c_bool
+        
+        msg = wintypes.MSG()
+        msg.hWnd = None
+        
+        while peek_message(ctypes.pointer(msg), None, 0, 0, 0x0001):
+            pass
+        
 
     @staticmethod
     def screenshot(

@@ -1,15 +1,17 @@
+import json
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QTableWidget,
-    QFrame, QLabel, QLineEdit, QPushButton
+    QDialog, QMessageBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QRadioButton, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget
 )
 
-from UI.basic import Title, DTable, Button, ButtonGroup
+from UI.basic import Title, DTable, Button, OCButton, ButtonGroup
 
 
-class AddKeyDialog(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+class AddKeyDialog(QDialog):
+    def __init__(self):
+        super().__init__()
         
         self.setWindowTitle("新增按鍵")
         layout = QVBoxLayout()
@@ -32,54 +34,159 @@ class AddKeyDialog(QWidget):
         interval_layout.addWidget(self.interval_input)
         layout.addLayout(interval_layout)
         
-        self.setLayout(layout)
+        repeat_layout = QVBoxLayout()
+        repeat_label = QLabel("重複方式:")
+        
+        repeat_opt1 = QHBoxLayout()
+        self.repeat_opt1_radio = QRadioButton("重複:")
+        self.repeat_opt1_radio.toggled.connect(self.update_enable_repeat_field)
+        self.repeat_opt1_spin = QSpinBox()
+        self.repeat_opt1_spin.setSuffix(" 次")
+        self.repeat_opt1_spin.setRange(1, 10 ** 5)
+        self.repeat_opt1_spin.setEnabled(False)
+        repeat_opt1.addWidget(self.repeat_opt1_radio)
+        repeat_opt1.addWidget(self.repeat_opt1_spin)
+        repeat_layout.addLayout(repeat_opt1)
+        
+        repeat_opt2 = QHBoxLayout()
+        self.repeat_opt2_radio = QRadioButton("重複直到停止")
+        repeat_opt1.addWidget(self.repeat_opt2_radio)
+        repeat_layout.addLayout(repeat_opt2)
+        
+        layout.addWidget(repeat_label)
+        layout.addLayout(repeat_layout)
 
+        OCbutton = OCButton(self).get()
+        layout.addLayout(OCbutton)
+        
+        self.setLayout(layout)
+        
+        
+    def update_enable_repeat_field(self):
+        self.repeat_opt1_spin.setEnabled(
+            self.repeat_opt1_radio.isChecked()
+        )
+                
+
+    def get_value(self):
+        key = self.key_input.text().replace(" ", "").split(",")
+        interval = self.interval_input.text()
+        
+        if not key or not interval: 
+            QMessageBox.warning(self, "輸入不得為空", "請輸入正確的值。")
+            return
+        
+        if any([not (k.encode().isalpha() or k.isnumeric()) for k in key]):
+            QMessageBox.warning(self, "輸入錯誤", "請輸入正確的按鍵名稱。")
+            return
+        
+        if not interval.isnumeric() or float(interval) <= 0:
+            QMessageBox.warning(self, "輸入錯誤", "請輸入正確的間隔時間。")
+            return
+        
+        if self.repeat_opt1_radio.isChecked():
+            repeat = (round(self.repeat_opt1_spin.value(), 1), 1)
+            
+        elif self.repeat_opt2_radio.isChecked():
+            repeat = (0, 0)
+            
+        else:
+            QMessageBox.warning(self, "輸入不得為空", "請勾選重複方式。")
+            return
+        
+        return key, interval, repeat
+        
 
 class KeySettingPanel(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         
         self.key_panel = QFrame()
         layout = QVBoxLayout()
         self.key_panel.setLayout(layout)
         
-        title = Title("按鍵設定").get()
+        title = Title("按鍵設定", self).get()
         layout.addWidget(title)
         
-        layout.addWidget(DTable(["按鍵", "間隔時間 ( 秒 )", "重複次數"]).get())
-        
-        button = QPushButton("test")
-        button.clicked.connect(self.test)
-        
-        layout.addWidget(button)
+        self.table = DTable(["按鍵", "間隔時間", "重複方式"], self).get()
+        layout.addWidget(self.table)
                 
         button_group = ButtonGroup([
-            Button("新增", self.add_key).get(),
-            Button("編輯", self.edit_key).get(),
-            Button("刪除", self.delete_key).get()
-        ])
+            Button("新增", lambda: self.add_key(), self).get(),
+            Button("編輯", lambda: self.edit_key(), self).get(),
+            Button("刪除", lambda: self.delete_key(), self).get()
+        ], self).get()
         
-        layout.addLayout(button_group.get())
+        layout.addLayout(button_group)
+      
+        with open("Auto-Keyboard-App/keys.json", "r") as jf:
+            if jf.read(1):
+                jf.seek(0)
+                keys = json.load(jf)
                 
-
-    def get(self):
-        return self.key_panel
-    
-    
-    def test(self):
-        print("test")
-    
-    
-    def add_key(self):
-        print("press")
+            else:
+                return
         
-        dialog = AddKeyDialog(self)
-        dialog.exec()
-    
-    
+        for key in keys:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            self.table.setItem(row, 0, QTableWidgetItem(f"{", ".join(key["key"])}"))
+            self.table.setItem(row, 1, QTableWidgetItem(f"{key["interval"]} 秒"))
+                
+            if key["repeat"][1] == 1:
+                self.table.setItem(row, 2, QTableWidgetItem(f"重複 {key["repeat"][0]} 次"))
+                
+            elif key["repeat"][1] == 0:
+                self.table.setItem(row, 2, QTableWidgetItem("重複直到停止"))
+
+
+    def add_key(self):        
+        self.dialog = AddKeyDialog()
+        self.dialog.show()
+        
+        if self.dialog.exec() == QDialog.DialogCode.Accepted:
+            if self.dialog.get_value() is None:
+                return
+            
+            else:
+                key, interval, repeat = self.dialog.get_value()
+            
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            self.table.setItem(row, 0, QTableWidgetItem(f"{", ".join(key)}"))
+            self.table.setItem(row, 1, QTableWidgetItem(f"{interval} 秒"))
+                
+            if repeat[1] == 1:
+                self.table.setItem(row, 2, QTableWidgetItem(f"重複 {repeat[0]} 次"))
+                
+            elif repeat[1] == 0:
+                self.table.setItem(row, 2, QTableWidgetItem("重複直到停止"))  
+                
+        with open("Auto-Keyboard-App/keys.json", "r+") as jf:
+            if jf.read(1):
+                jf.seek(0)
+                keys = json.load(jf)
+                
+            else:
+                keys = []
+            
+            jf.truncate(0)
+            jf.seek(0)
+            keys.append({
+                "key": key,
+                "interval": interval,
+                "repeat": repeat
+            })
+            json.dump(keys, jf, indent=4)
+        
+
     def edit_key(self):
         pass    
     
     
     def delete_key(self):   
         pass
+    
+    
+    def get(self):
+        return self.key_panel

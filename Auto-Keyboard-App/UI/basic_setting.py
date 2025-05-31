@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFrame
 )
 
-from UI.basic import Title, ComboBox
+from UI.basic import Title, ComboBox, Button
 
 
 class BasicSettingPanel(QWidget):
@@ -17,6 +17,12 @@ class BasicSettingPanel(QWidget):
         layout.addWidget(title)
         
         layout.addLayout(ComboBox("語言", ["繁體中文", "English"]).get())
+        
+        layout.addWidget(Button("開始", self.start).get())
+        
+    
+    def start(self):
+        pass
        
     
     def get(self):

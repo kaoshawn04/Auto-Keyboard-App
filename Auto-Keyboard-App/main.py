@@ -4,27 +4,20 @@ import time
 import pyuac
 import keyboard
 
-#try:
 from library.common.action import Keyboard
 from library.windows.api import Windows_api
 
-# except (ImportError, ModuleNotFoundError):
-#     dir_path = (os.path.realpath(__file__)).rsplit("\\library", 1)[0]
-#     sys.path.append(dir_path)
-# 
-#     from library.common.action import Keyboard
-#     from library.windows.api import Windows_api
-    
-    
+
 def press_key(key):
     Windows_api.block_input(True)
-    
-    Keyboard.keydown("0")
-    time.sleep(0.7)
-    Keyboard.keyup("0")
-
+    time.sleep(0.2)
+    Windows_api.remove_message()
     Windows_api.block_input(False)
     
+    Keyboard.keydown("0")
+    time.sleep(1)
+    Keyboard.keyup("0")
+
     
 def main():
     while True:
